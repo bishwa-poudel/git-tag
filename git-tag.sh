@@ -100,10 +100,15 @@ tag_repository() {
     exit 1
   fi
 
-  git tag -f latest $NEW_TAG
+  echo "Tagged $NEW_TAG and pushed to origin."
   GIT_REV=$(git rev-parse $NEW_TAG)
 
   echo "Tagged $NEW_TAG with hash id $GIT_REV and pushed to origin."
+  
+  if [ "$RELEASE_TYPE" != "temp" ]; then
+    git push origin latest
+    echo "Pushed latest tag to origin."
+  fi
 }
 
 # Main function
