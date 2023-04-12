@@ -23,27 +23,26 @@ select_repository() {
 
 # Function to create an initial tag with version 1.0.0
 create_initial_tag() {
-  INITIAL_TAG="TMS-$REPO_NAME-1.0.0-$(date +%Y-%m-%d)"
-  git tag -a $INITIAL_TAG -m "Initial tag"
-  echo "Created initial tag: $INITIAL_TAG"
-  exit 0
+  NEW_TAG="TMS-$REPO_NAME-1.0.0-$(date +%F)"
+  COMMIT_MESSAGE="PROD RELEASE $(date +%F)"
+  echo "Created initial tag: $NEW_TAG"
 }
 
 # Function to get the latest tag and extract the version number and date
 get_latest_tag_info() {
-  LATEST_TAG=$(git describe --abbrev=0)
+  echo "Fetching from origin"
+  git pull
+  git pull --tags --force
 
-  while [[ ! $LATEST_TAG =~ TMS-$REPO_NAME-[0-9]+\.[0-9]+\.[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; do
-    PREV_TAG=$LATEST_TAG
-    LATEST_TAG=$(git describe --abbrev=0 --exclude=$LATEST_TAG)
-    if [ "$LATEST_TAG" == "$PREV_TAG" ]; then
-      echo "Error: No previous tag found that matches the expected pattern."
-      exit 1
-    fi
-  done
+  LATEST_TAG=$(git tag -l --sort=-creatordate "TMS-$REPO_NAME-[0-9]*.[0-9]*.[0-9]*-*" | head -n 1)
+  DATE=$(date +%F)
 
-  VERSION=${LATEST_TAG##TMS-$REPO_NAME-}
-  DATE=$(echo $LATEST_TAG | awk -F- '{print $NF}')
+  if [ -z "$LATEST_TAG" ]; then
+    echo "No matching tags found."
+    IS_INITIAL="true"
+  else
+    VERSION=${LATEST_TAG##TMS-$REPO_NAME-}
+  fi
 }
 
 # Function to prompt the user for the release type and increment the version number accordingly
@@ -52,7 +51,7 @@ increment_version_number() {
   echo "1. Major release"
   echo "2. Minor release"
   echo "3. Patch release"
-  echo "4. Temp release"
+  echo "4. Test release"
   read RELEASE_TYPE
 
   case $RELEASE_TYPE in
@@ -72,8 +71,8 @@ increment_version_number() {
       COMMIT_MESSAGE="PROD RELEASE $DATE"
       ;;
     4)
-      NEW_TAG="temp"
-      COMMIT_MESSAGE="TEMP PROD RELEASE $DATE"
+      NEW_TAG="test"
+      COMMIT_MESSAGE="TEST PROD RELEASE $DATE"
       ;;
     *)
       echo "Error: Invalid release type."
@@ -100,13 +99,12 @@ tag_repository() {
     exit 1
   fi
 
-  echo "Tagged $NEW_TAG and pushed to origin."
   GIT_REV=$(git rev-parse $NEW_TAG)
-
   echo "Tagged $NEW_TAG with hash id $GIT_REV and pushed to origin."
   
-  if [ "$RELEASE_TYPE" != "temp" ]; then
-    git push origin latest
+  if [ "$RELEASE_TYPE" != "4" ]; then
+    git tag latest $GIT_REV --force
+    git push origin latest --force
     echo "Pushed latest tag to origin."
   fi
 }
@@ -114,15 +112,16 @@ tag_repository() {
 # Main function
 main() {
   select_repository
+  get_latest_tag_info
 
-  # Check if the latest tag fits the pattern, otherwise create an initial tag
-  if ! git describe --abbrev=0 --tags | grep -q "^TMS-$REPO_NAME-[0-9]\+\.[0-9]\+\.[0-9]\+-[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\$"; then
+  if [ "$IS_INITIAL" = "true" ]; then
     create_initial_tag
   else
-    get_latest_tag_info
     increment_version_number
-    tag_repository
   fi
+  
+  tag_repository
+
 }
 
 # Call the main function
