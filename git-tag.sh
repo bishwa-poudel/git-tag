@@ -7,7 +7,7 @@ select_repository() {
   echo "2. SERVICE"
   read REPO_NUM
 
-  if [ "$REPO_NUM" -ne 1 ] && [ "$REPO_NUM" -ne 2 ]; then
+  if ! echo "$REPO_NUM" | grep -q "^[1-2]$"; then
     echo "Error: Invalid input. Please enter 1 or 2."
     exit 1
   fi
