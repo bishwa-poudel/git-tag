@@ -33,10 +33,14 @@ create_initial_tag() {
 get_latest_tag_info() {
   LATEST_TAG=$(git describe --abbrev=0)
 
-  if [[ ! $LATEST_TAG =~ TMS-$REPO_NAME-[0-9]+\.[0-9]+\.[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; then
-    echo "Error: Latest tag does not match the expected pattern."
-    exit 1
-  fi
+  while [[ ! $LATEST_TAG =~ TMS-$REPO_NAME-[0-9]+\.[0-9]+\.[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; do
+    PREV_TAG=$LATEST_TAG
+    LATEST_TAG=$(git describe --abbrev=0 --exclude=$LATEST_TAG)
+    if [ "$LATEST_TAG" == "$PREV_TAG" ]; then
+      echo "Error: No previous tag found that matches the expected pattern."
+      exit 1
+    fi
+  done
 
   VERSION=${LATEST_TAG##TMS-$REPO_NAME-}
   DATE=$(echo $LATEST_TAG | awk -F- '{print $NF}')
@@ -90,7 +94,15 @@ tag_repository() {
 main() {
   select_repository
 
-  cd $REPO_NAME
+  # Check if the latest tag fits the pattern, otherwise create an initial tag
+  if ! git describe --abbrev=0 --tags | grep -q "^TMS-$REPO_NAME-[0-9]\+\.[0-9]\+\.[0-9]\+-[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}\$"; then
+    create_initial_tag
+  else
+    get_latest_tag_info
+    increment_version_number
+    tag_repository
+  fi
+}
 
-  if [ -z "$(git tag)" ]; then
-   
+# Call the main function
+main
