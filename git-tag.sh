@@ -1,50 +1,96 @@
 #!/bin/bash
 
-# Get the previous tag name
-PREVIOUS_TAG=$(git describe --tags --abbrev=0) || { echo "Error: could not get previous tag name" ; exit 1; }
+# Function to prompt the user to select a repository to tag
+select_repository() {
+  echo "Which repository do you want to tag?"
+  echo "1. CLIENT"
+  echo "2. SERVICE"
+  read REPO_NUM
 
-# Split the previous tag into its components
-IFS='-' read -ra PREVIOUS_TAG_COMPONENTS <<< "${PREVIOUS_TAG}" || { echo "Error: could not split previous tag name into components" ; exit 1; }
-
-# Extract the version number from the previous tag
-PREVIOUS_VERSION="${PREVIOUS_TAG_COMPONENTS[2]}" || { echo "Error: could not extract version number from previous tag name" ; exit 1; }
-
-# Split the previous version number into its components
-IFS='.' read -ra PREVIOUS_VERSION_COMPONENTS <<< "${PREVIOUS_VERSION}" || { echo "Error: could not split previous version number into components" ; exit 1; }
-
-# Prompt the user to select whether to do a major, minor, or patch release
-echo "Select release type (enter 1, 2, or 3):"
-echo "1. Major release (increase first component)"
-echo "2. Minor release (increase second component)"
-echo "3. Patch release (increase third component)"
-read -r RELEASE_TYPE
-
-# Determine which version component to increment based on the user's selection
-case "${RELEASE_TYPE}" in
-  1)
-    NEW_VERSION="${((PREVIOUS_VERSION_COMPONENTS[0]+1))}.${PREVIOUS_VERSION_COMPONENTS[1]}.${PREVIOUS_VERSION_COMPONENTS[2]}"
-    ;;
-  2)
-    NEW_VERSION="${PREVIOUS_VERSION_COMPONENTS[0]}.$((PREVIOUS_VERSION_COMPONENTS[1]+1)).${PREVIOUS_VERSION_COMPONENTS[2]}"
-    ;;
-  3)
-    NEW_VERSION="${PREVIOUS_VERSION_COMPONENTS[0]}.${PREVIOUS_VERSION_COMPONENTS[1]}.$((PREVIOUS_VERSION_COMPONENTS[2]+1))"
-    ;;
-  *)
-    echo "Invalid release type selected"
+  if [ "$REPO_NUM" -ne 1 ] && [ "$REPO_NUM" -ne 2 ]; then
+    echo "Error: Invalid input. Please enter 1 or 2."
     exit 1
-    ;;
-esac
+  fi
 
-# Define the new tag name
-NEW_TAG="TMS-CLIENT-V${NEW_VERSION}-$(date +%Y-%m-%d)" || { echo "Error: could not construct new tag name" ; exit 1; }
+  if [ "$REPO_NUM" -eq 1 ]; then
+    REPO_NAME="CLIENT"
+  elif [ "$REPO_NUM" -eq 2 ]; then
+    REPO_NAME="SERVICE"
+  fi
 
-# Define the commit message
-COMMIT_MESSAGE="Release version ${NEW_TAG}"
+  echo "Selected repository: $REPO_NAME"
+}
 
-# Create the tag and push it to the remote repository
-git tag -a "${NEW_TAG}" -m "${COMMIT_MESSAGE}" || { echo "Error: could not create new tag" ; exit 1; }
-git push origin "${NEW_TAG}" || { echo "Error: could not push new tag to remote repository" ; exit 1; }
+# Function to create an initial tag with version 1.0.0
+create_initial_tag() {
+  INITIAL_TAG="TMS-$REPO_NAME-1.0.0-$(date +%Y-%m-%d)"
+  git tag -a $INITIAL_TAG -m "Initial tag"
+  echo "Created initial tag: $INITIAL_TAG"
+  exit 0
+}
 
-# Print success message
-echo "Successfully created and pushed new tag: ${NEW_TAG}"
+# Function to get the latest tag and extract the version number and date
+get_latest_tag_info() {
+  LATEST_TAG=$(git describe --abbrev=0)
+
+  if [[ ! $LATEST_TAG =~ TMS-$REPO_NAME-[0-9]+\.[0-9]+\.[0-9]+-[0-9]{4}-[0-9]{2}-[0-9]{2} ]]; then
+    echo "Error: Latest tag does not match the expected pattern."
+    exit 1
+  fi
+
+  VERSION=${LATEST_TAG##TMS-$REPO_NAME-}
+  DATE=$(echo $LATEST_TAG | awk -F- '{print $NF}')
+}
+
+# Function to prompt the user for the release type and increment the version number accordingly
+increment_version_number() {
+  echo "What type of release is this? (major/minor/patch)"
+  read RELEASE_TYPE
+
+  case $RELEASE_TYPE in
+    major)
+      VERSION=$(echo $VERSION | awk -F. '{$1 = $1 + 1; $2 = 0; $3 = 0;} 1' OFS=.)
+      ;;
+    minor)
+      VERSION=$(echo $VERSION | awk -F. '{$2 = $2 + 1; $3 = 0;} 1' OFS=.)
+      ;;
+    patch)
+      VERSION=$(echo $VERSION | awk -F. '{$3 = $3 + 1;} 1' OFS=.)
+      ;;
+    *)
+      echo "Error: Invalid release type."
+      exit 1
+      ;;
+  esac
+
+  NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+  COMMIT_MESSAGE="Tagging version $NEW_TAG"
+}
+
+# Function to tag the repository and push the tag
+tag_repository() {
+  git tag -a $NEW_TAG -m "$COMMIT_MESSAGE"
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to create tag."
+    exit 1
+  fi
+
+  git push origin $NEW_TAG
+
+  if [ $? -ne 0 ]; then
+    echo "Error: Failed to push tag."
+    exit 1
+  fi
+
+  echo "Tagged $NEW_TAG and pushed to origin."
+}
+
+# Main function
+main() {
+  select_repository
+
+  cd $REPO_NAME
+
+  if [ -z "$(git tag)" ]; then
+   
