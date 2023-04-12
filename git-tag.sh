@@ -83,9 +83,12 @@ tag_repository() {
   git push origin $NEW_TAG
 
   if [ $? -ne 0 ]; then
-    echo "Error: Failed to push tag."
+    echo "Error: Failed to push tag. Deleting the tag $NEW_TAG."
+    git tag -d $NEW_TAG
     exit 1
   fi
+
+  git tag -f latest $NEW_TAG
 
   echo "Tagged $NEW_TAG and pushed to origin."
 }
