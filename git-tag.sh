@@ -2,13 +2,13 @@
 
 # Function to prompt the user to select a repository to tag
 select_repository() {
-  echo "Which repository do you want to tag?"
-  echo "1. CLIENT"
-  echo "2. SERVICE"
+  echo -e "\e[32mWhich repository do you want to tag?\e[0m"
+  echo -e "1. \e[36mCLIENT\e[0m"
+  echo -e "2. \e[36mSERVICE\e[0m"
   read REPO_NUM
 
   if ! echo "$REPO_NUM" | grep -q "^[1-2]$"; then
-    echo "Error: Invalid input. Please enter 1 or 2."
+    echo -e "\e[31mError: Invalid input. Please enter 1 or 2.\e[0m"
     exit 1
   fi
 
@@ -18,19 +18,19 @@ select_repository() {
     REPO_NAME="SERVICE"
   fi
 
-  echo "Selected repository: $REPO_NAME"
+  echo -e "Selected repository: \e[36m$REPO_NAME\e[0m"
 }
 
 # Function to create an initial tag with version 1.0.0
 create_initial_tag() {
   NEW_TAG="TMS-$REPO_NAME-1.0.0-$(date +%F)"
   COMMIT_MESSAGE="PROD RELEASE $(date +%F)"
-  echo "Created initial tag: $NEW_TAG"
+  echo -e "Created initial tag: \e[32m$NEW_TAG\e[0m"
 }
 
 # Function to get the latest tag and extract the version number and date
 get_latest_tag_info() {
-  echo "Fetching from origin"
+  echo -e "\e[34mFetching from origin\e[0m"
   git pull
   git pull --tags --force
 
@@ -38,7 +38,7 @@ get_latest_tag_info() {
   DATE=$(date +%F)
 
   if [ -z "$LATEST_TAG" ]; then
-    echo "No matching tags found."
+    echo -e "\e[33mNo matching tags found.\e[0m"
     IS_INITIAL="true"
   else
     VERSION=${LATEST_TAG##TMS-$REPO_NAME-}
@@ -47,12 +47,11 @@ get_latest_tag_info() {
 
 # Function to prompt the user for the release type and increment the version number accordingly
 increment_version_number() {
-  echo "What type of release is this?"
-  echo "1. Major release"
-  echo "2. Minor release"
-  echo "3. Patch release"
-  echo "4. Test release"
-  read RELEASE_TYPE
+  echo -e "\e[32mWhat type of release is this?\e[0m"
+  echo -e "1. \e[36mMajor release\e[0m"
+  echo -e "2. \e[36mMinor release\e[0m"
+  echo -e "3. \e[36mPatch release\e[0m"
+  echo -e "4. \e[36mTest release\e[0m"
 
   case $RELEASE_TYPE in
     1)
@@ -75,7 +74,7 @@ increment_version_number() {
       COMMIT_MESSAGE="TEST PROD RELEASE $DATE"
       ;;
     *)
-      echo "Error: Invalid release type."
+      echo -e "\e[31mError: Invalid release type.\e[0m"
       exit 1
       ;;
   esac
@@ -87,25 +86,25 @@ tag_repository() {
   git tag -a $NEW_TAG -m "$COMMIT_MESSAGE"
 
   if [ $? -ne 0 ]; then
-    echo "Error: Failed to create tag."
+    echo -e "\e[31mError: Failed to create tag.\e[0m"
     exit 1
   fi
 
   git push origin $NEW_TAG
 
   if [ $? -ne 0 ]; then
-    echo "Error: Failed to push tag. Deleting the tag $NEW_TAG."
+    echo -e "\e[31mError: Failed to push tag. Deleting the tag $NEW_TAG.\e[0m"
     git tag -d $NEW_TAG
     exit 1
   fi
 
   GIT_REV=$(git rev-parse $NEW_TAG)
-  echo "Tagged $NEW_TAG with hash id $GIT_REV and pushed to origin."
+  echo -e "Tagged \e[32m$NEW_TAG\e[0m with hash id \e[36m$GIT_REV\e[0m and pushed to origin."
   
   if [ "$RELEASE_TYPE" != "4" ]; then
     git tag latest $GIT_REV --force
     git push origin latest --force
-    echo "Pushed latest tag to origin."
+    echo -e "Pushed latest tag to origin."
   fi
 }
 
