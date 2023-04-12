@@ -48,18 +48,32 @@ get_latest_tag_info() {
 
 # Function to prompt the user for the release type and increment the version number accordingly
 increment_version_number() {
-  echo "What type of release is this? (major/minor/patch)"
+  echo "What type of release is this?"
+  echo "1. Major release"
+  echo "2. Minor release"
+  echo "3. Patch release"
+  echo "4. Temp release"
   read RELEASE_TYPE
 
   case $RELEASE_TYPE in
-    major)
+    1)
       VERSION=$(echo $VERSION | awk -F. '{$1 = $1 + 1; $2 = 0; $3 = 0;} 1' OFS=.)
+      NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+      COMMIT_MESSAGE="PROD RELEASE $DATE"
       ;;
-    minor)
+    2)
       VERSION=$(echo $VERSION | awk -F. '{$2 = $2 + 1; $3 = 0;} 1' OFS=.)
+      NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+      COMMIT_MESSAGE="PROD RELEASE $DATE"
       ;;
-    patch)
+    3)
       VERSION=$(echo $VERSION | awk -F. '{$3 = $3 + 1;} 1' OFS=.)
+      NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+      COMMIT_MESSAGE="PROD RELEASE $DATE"
+      ;;
+    4)
+      NEW_TAG="temp"
+      COMMIT_MESSAGE="TEMP PROD RELEASE $DATE"
       ;;
     *)
       echo "Error: Invalid release type."
@@ -67,8 +81,6 @@ increment_version_number() {
       ;;
   esac
 
-  NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
-  COMMIT_MESSAGE="Tagging version $NEW_TAG"
 }
 
 # Function to tag the repository and push the tag
@@ -89,8 +101,9 @@ tag_repository() {
   fi
 
   git tag -f latest $NEW_TAG
+  GIT_REV=$(git rev-parse $NEW_TAG)
 
-  echo "Tagged $NEW_TAG and pushed to origin."
+  echo "Tagged $NEW_TAG with hash id $GIT_REV and pushed to origin."
 }
 
 # Main function
