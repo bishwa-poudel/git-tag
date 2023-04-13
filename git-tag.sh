@@ -31,8 +31,8 @@ create_initial_tag() {
 # Function to get the latest tag and extract the version number and date
 get_latest_tag_info() {
   echo -e "\e[34mFetching from origin\e[0m"
-  git pull
-  git pull --tags --force
+  git pull > /dev/null 2>&1
+  git pull --tags --force > /dev/null 2>&1
 
   LATEST_TAG=$(git tag -l --sort=-creatordate "TMS-$REPO_NAME-[0-9]*.[0-9]*.[0-9]*-*" | head -n 1)
   DATE=$(date +%F)
@@ -52,6 +52,12 @@ increment_version_number() {
   echo -e "2. \e[36mMinor release\e[0m"
   echo -e "3. \e[36mPatch release\e[0m"
   echo -e "4. \e[36mTest release\e[0m"
+  read $RELEASE_TYPE
+
+  if ! echo "$RELEASE_TYPE" | grep -q "^[1-4]$"; then
+    echo -e "\e[31mError: Invalid input.\e[0m"
+    exit 1
+  fi
 
   case $RELEASE_TYPE in
     1)
@@ -83,14 +89,14 @@ increment_version_number() {
 
 # Function to tag the repository and push the tag
 tag_repository() {
-  git tag -a $NEW_TAG -m "$COMMIT_MESSAGE"
+  git tag -a $NEW_TAG -m "$COMMIT_MESSAGE" > /dev/null 2>&1
 
   if [ $? -ne 0 ]; then
     echo -e "\e[31mError: Failed to create tag.\e[0m"
     exit 1
   fi
 
-  git push origin $NEW_TAG
+  git push origin $NEW_TAG > /dev/null 2>&1
 
   if [ $? -ne 0 ]; then
     echo -e "\e[31mError: Failed to push tag. Deleting the tag $NEW_TAG.\e[0m"
@@ -102,8 +108,8 @@ tag_repository() {
   echo -e "Tagged \e[32m$NEW_TAG\e[0m with hash id \e[36m$GIT_REV\e[0m and pushed to origin."
   
   if [ "$RELEASE_TYPE" != "4" ]; then
-    git tag latest $GIT_REV --force
-    git push origin latest --force
+    git tag latest $GIT_REV --force > /dev/null 2>&1
+    git push origin latest --force > /dev/null 2>&1
     echo -e "Pushed latest tag to origin."
   fi
 }
