@@ -25,13 +25,14 @@ select_repository() {
 
 # Function to create an initial tag with version 1.0.0
 create_initial_tag() {
-  NEW_TAG="TMS-$REPO_NAME-1.0.0-$(date +%F)"
-  COMMIT_MESSAGE="PROD RELEASE $(date +%F)"
+  NEW_TAG="TMS-$REPO_NAME-V1.0.0-$DATE"
+  COMMIT_MESSAGE="PROD RELEASE $DATE"
   echo -e "Created initial tag: \e[32m$NEW_TAG\e[0m"
 }
 
 # Function to get the latest tag and extract the version number and date
 get_latest_tag_info() {
+  DATE=$(date +%F)
   echo -e "\e[34mFetching from origin\e[0m"
 
   # Fetch the latest changes from origin
@@ -78,17 +79,17 @@ increment_version_number() {
   case $RELEASE_TYPE in
     1)
       VERSION=$(echo $VERSION | awk -F. '{$1 = $1 + 1; $2 = 0; $3 = 0;} 1' OFS=.)
-      NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+      NEW_TAG="TMS-$REPO_NAME-V$VERSION-$DATE"
       COMMIT_MESSAGE="PROD RELEASE $DATE"
       ;;
     2)
       VERSION=$(echo $VERSION | awk -F. '{$2 = $2 + 1; $3 = 0;} 1' OFS=.)
-      NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+      NEW_TAG="TMS-$REPO_NAME-V$VERSION-$DATE"
       COMMIT_MESSAGE="PROD RELEASE $DATE"
       ;;
     3)
       VERSION=$(echo $VERSION | awk -F. '{$3 = $3 + 1;} 1' OFS=.)
-      NEW_TAG="TMS-$REPO_NAME-$VERSION-$DATE"
+      NEW_TAG="TMS-$REPO_NAME-V$VERSION-$DATE"
       COMMIT_MESSAGE="PROD RELEASE $DATE"
       ;;
     4)
